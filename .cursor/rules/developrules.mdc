@@ -6,25 +6,60 @@ alwaysApply: true
 # Cursor AI Project Rules for IT Seminar Application
 
 ## 💻 Development Environment
-- Backend: Spring Boot 3.2.x (Maven)
+- Backend: Spring Boot 3.2.0 (Maven)
 - JDK: Java 17
-- Frontend: Next.js 14.x (App Router) with React 18.x
+- Frontend: Next.js 14.0.0 (App Router) with React 18.x
 - Node.js: v18.x LTS
 - npm: v9.x
 - Database: PostgreSQL 15.x
 - ORM: Hibernate 6.x (JPA)
-- Authentication: Spring Security + LDAP (현재는 로컬 LDAP, 이후 사내 AD로 확장 예정)
 - File Storage: PostgreSQL BLOB column
+- Styling: Tailwind CSS
 - 오프라인 사내망에서도 동작 가능해야 함
 - 외부 API, 외부 CDN, 외부 파일 스토리지 사용 금지
+- **Docker 컨테이너화 완료** (사내 배포용)
 
 ---
 
 ## 📦 Project Structure
-/backend # Spring Boot 프로젝트
-/frontend # Next.js 프로젝트
-/common # 선택적 공통 타입/유틸리티
+```
+ITSeminar/
+├── 📁 backend/             # Spring Boot 프로젝트
+├── 📁 frontend/            # Next.js 프로젝트
+├── 📁 deploy/              # Docker 배포 패키지
+│   ├── 📁 scripts/         # 자동 배포 스크립트
+│   ├── 📁 nginx/           # Nginx 설정
+│   ├── docker-compose.yml  # 컨테이너 오케스트레이션
+│   └── DEPLOYMENT_GUIDE.md # 배포 가이드
+├── README.md               # 프로젝트 개요
+└── SETUP_GUIDE.md          # 개발 환경 설정 가이드
+```
 
+---
+
+## 🎯 Implementation Status
+
+### ✅ 완료된 기능
+- **인증 시스템**: Spring Security + DB 기반 인증
+- **사용자 관리**: ROLE_USER, ROLE_ADMIN 권한 시스템
+- **세미나 관리**: CRUD, 카테고리 분류, 검색/필터링
+- **신청 시스템**: 신청/취소, 24시간 제한, 자동 마감
+- **파일 관리**: 다중 파일 업로드/다운로드 (PostgreSQL BLOB)
+- **대시보드**: 관리자용 통계 및 모니터링
+- **QR 코드**: 출석 체크용 QR 생성 (부분 구현)
+- **반응형 UI**: Tailwind CSS 기반 모던 디자인
+- **API 문서**: Swagger UI 자동화
+- **Docker 배포**: 완전한 컨테이너화 및 배포 스크립트
+
+### 🚧 부분 구현
+- **출석 시스템**: QR 코드 생성 완료, 스캔 기능 미완성
+- **알림 시스템**: 기본 구조만 구현
+
+### 📋 향후 개발 (인턴 과제)
+1. **QR 코드 출석 시스템 완성** (우선순위 1)
+2. **실시간 알림 시스템** (우선순위 2)
+3. **고급 검색 및 필터링** (우선순위 3)
+4. **통계 및 리포트 기능 확장** (우선순위 4)
 
 ---
 
@@ -33,62 +68,65 @@ alwaysApply: true
 - 모든 외부 종속성은 내부망에서도 설치 가능해야 함
 - 인증, 파일 업로드, 데이터 저장 방식 등은 반드시 명시된 형태로만 구성
 - 모든 기능은 오프라인 환경에서 정상 동작 가능해야 함
+- Docker 컨테이너로 배포하여 환경 일관성 보장
 
 ---
 
 ## 🔐 Authentication
-- Spring Security 기반 로그인
-- 초기엔 DB 기반 username/password (BCrypt)
-- LDAP (Local) 연동 → 이후 사내 Active Directory로 교체 가능하도록 인터페이스 설계
+- Spring Security 기반 로그인 ✅
+- DB 기반 username/password (BCrypt) ✅
+- Session 기반 인증 ✅
+- 향후 LDAP/Active Directory 연동 예정
 - 인증 API:
-  - POST `/api/auth/login`
-  - GET `/api/auth/me`
-  - POST `/api/auth/logout`
+  - POST `/api/auth/login` ✅
+  - GET `/api/auth/me` ✅
+  - POST `/api/auth/logout` ✅
 
 ---
 
 ## 👤 Roles
-- USER: 세미나 조회, 신청 가능
-- ADMIN: 세미나 등록, 수정, 삭제, 신청자 확인 가능
-- 권한 구조는 `ROLE_USER`, `ROLE_ADMIN` 형식
+- USER: 세미나 조회, 신청 가능 ✅
+- ADMIN: 세미나 등록, 수정, 삭제, 신청자 확인 가능 ✅
+- 권한 구조는 `ROLE_USER`, `ROLE_ADMIN` 형식 ✅
 
 ---
 
 ## 📚 Features
 
-### 사용자 기능 (USER)
-- 로그인
-- 세미나 목록 조회
+### 사용자 기능 (USER) - ✅ 완료
+- 로그인/로그아웃
+- 세미나 목록 조회 (카테고리별 필터링)
 - 세미나 상세 조회
 - 세미나 신청
 - 신청 내역 조회
 - 신청 취소 (세미나 시작 24시간 전까지만 가능)
+- 파일 다운로드
 
-### 관리자 기능 (ADMIN)
-- 세미나 등록 (첨부파일 포함)
-- 세미나 수정 / 삭제
+### 관리자 기능 (ADMIN) - ✅ 완료
+- 세미나 등록/수정/삭제 (첨부파일 포함)
+- 카테고리 관리
 - 세미나별 신청자 목록 조회
-- 신청자 명단 Excel 다운로드 (옵션 기능)
+- 관리 대시보드 (통계)
+- QR 코드 생성 (출석용)
 
-### 시스템 자동 기능
+### 시스템 자동 기능 - ✅ 완료
 - 세미나는 시작 시간이 지나면 자동으로 마감 처리됨 (`is_closed = true`)
 - 마감된 세미나는 신청 불가
 - 신청 마감 여부는 백엔드에서 판단하며, 프론트에도 반영
 
 ---
 
-## 📎 File Upload
-- 세미나 등록 시 파일 업로드 가능
+## 📎 File Upload - ✅ 완료
+- 세미나 등록 시 다중 파일 업로드 가능
 - 업로드 파일은 PostgreSQL의 BLOB 컬럼에 저장
 - 파일 메타정보는 별도 테이블에 저장
-- 다중 파일 업로드 구조 지원
 - 파일 다운로드 API 제공
 
 ---
 
-## 📂 ERD
+## 📂 ERD (현재 구현 상태)
 
-### User
+### User ✅
 | Field         | Type        |
 |---------------|-------------|
 | id            | UUID (PK)   |
@@ -100,23 +138,28 @@ alwaysApply: true
 | role          | Enum(ADMIN/USER) |
 | created_at    | Timestamp   |
 
----
-
-### Seminar
+### Seminar ✅
 | Field         | Type        |
 |---------------|-------------|
 | id            | UUID (PK)   |
 | title         | String      |
 | description   | Text        |
-| date          | Timestamp   |
+| seminar_date  | Timestamp   |
 | location      | String      |
 | is_closed     | Boolean     |
+| category_id   | UUID (FK)   |
 | created_by    | UUID (FK to User) |
 | created_at    | Timestamp   |
 
----
+### Category ✅
+| Field         | Type        |
+|---------------|-------------|
+| id            | UUID (PK)   |
+| name          | String      |
+| description   | Text        |
+| created_at    | Timestamp   |
 
-### SeminarApplication
+### SeminarApplication ✅
 | Field         | Type        |
 |---------------|-------------|
 | id            | UUID (PK)   |
@@ -124,65 +167,123 @@ alwaysApply: true
 | seminar_id    | UUID (FK)   |
 | applied_at    | Timestamp   |
 
----
-
-### FileAttachment
+### FileAttachment ✅
 | Field         | Type        |
 |---------------|-------------|
 | id            | UUID (PK)   |
 | seminar_id    | UUID (FK)   |
 | file_name     | String      |
+| content_type  | String      |
+| file_size     | Long        |
 | file_data     | BLOB        |
 | uploaded_at   | Timestamp   |
+
+### Attendance 🚧 (부분 구현)
+| Field         | Type        |
+|---------------|-------------|
+| id            | UUID (PK)   |
+| user_id       | UUID (FK)   |
+| seminar_id    | UUID (FK)   |
+| qr_code       | String      |
+| attended_at   | Timestamp   |
+| status        | Enum        |
 
 ---
 
 ## 🌐 API Specification
 
-### Auth
+### Auth ✅
 - `POST /api/auth/login` – 로그인
 - `GET /api/auth/me` – 로그인한 사용자 정보
 - `POST /api/auth/logout` – 로그아웃
 
-### Users
+### Users ✅
 - `GET /api/users/me` – 내 정보 조회
 
-### Seminars
-- `GET /api/seminars` – 세미나 목록 조회  
-- `GET /api/seminars/{id}` – 세미나 상세 보기  
-- `POST /api/seminars` – 세미나 등록 (관리자)  
-- `PUT /api/seminars/{id}` – 세미나 수정 (관리자)  
-- `DELETE /api/seminars/{id}` – 세미나 삭제 (관리자)  
-- ✅ 세미나는 시작 시간이 지나면 자동 마감 처리됨 (`is_closed = true`)  
-- ✅ 마감된 세미나는 신청 불가  
+### Seminars ✅
+- `GET /api/seminars` – 세미나 목록 조회 (카테고리 필터링 지원)
+- `GET /api/seminars/{id}` – 세미나 상세 보기
+- `POST /api/seminars` – 세미나 등록 (관리자)
+- `PUT /api/seminars/{id}` – 세미나 수정 (관리자)
+- `DELETE /api/seminars/{id}` – 세미나 삭제 (관리자)
 
-### Applications
-- `POST /api/applications` – 세미나 신청  
-- `GET /api/applications/my` – 내 신청 내역  
-- `GET /api/seminars/{id}/applicants` – 세미나별 신청자 목록 (관리자)  
-- `DELETE /api/applications/{id}/cancel` – 세미나 신청 취소  
-  - ✅ 세미나 시작 24시간 전까지만 취소 가능  
-  - ✅ 마감된 세미나 또는 지난 세미나는 취소 불가  
+### Categories ✅
+- `GET /api/categories` – 카테고리 목록 조회
+- `POST /api/categories` – 카테고리 생성 (관리자)
+- `PUT /api/categories/{id}` – 카테고리 수정 (관리자)
+- `DELETE /api/categories/{id}` – 카테고리 삭제 (관리자)
 
-### Attachments
-- `POST /api/seminars/{id}/attachments` – 파일 업로드 (관리자)  
+### Applications ✅
+- `POST /api/applications` – 세미나 신청
+- `GET /api/applications/my` – 내 신청 내역
+- `GET /api/seminars/{id}/applicants` – 세미나별 신청자 목록 (관리자)
+- `DELETE /api/applications/{id}/cancel` – 세미나 신청 취소
+
+### Attachments ✅
+- `POST /api/seminars/{id}/attachments` – 파일 업로드 (관리자)
 - `GET /api/attachments/{id}/download` – 파일 다운로드
 
+### Attendance 🚧
+- `POST /api/attendance/generate-qr/{seminarId}` – QR 코드 생성 (관리자)
+- `POST /api/attendance/check-in` – QR 코드 스캔 출석 체크 (미완성)
 
 ---
 
-## 🧪 Testing & Documentation
+## 🐳 Docker Deployment
+- **컨테이너 구성**: Frontend (Next.js) + Backend (Spring Boot) + Database (PostgreSQL) + Proxy (Nginx)
+- **배포 패키지 크기**: 644MB (사내 USB/네트워크 배포용)
+- **자동화 스크립트**: Windows/Linux 환경 지원
+- **오프라인 배포**: 외부 인터넷 연결 불필요
+
+### 배포 명령어
+```bash
+# Windows
+scripts\load-images.bat
+scripts\start-services.bat
+
+# Linux
+./scripts/load-images.sh
+./scripts/start-services.sh
+```
+
+---
+
+## 🧪 Testing & Documentation ✅
 - JUnit 5 기반 테스트
-- Swagger(OpenAPI 3) 문서 자동화 (springdoc-openapi 2.x)
+- Swagger(OpenAPI 3) 문서 자동화 (`/swagger-ui.html`)
 - 오프라인에서도 확인 가능한 문서 포함
 
 ---
 
 ## 🚫 외부 의존 금지
-- 외부 인터넷으로 직접 API 호출, CDN, 외부 파일 스토리지 사용 금지
-- 외부 이미지, 외부 CDN 자원 사용 금지
+- 외부 인터넷으로 직접 API 호출, CDN, 외부 파일 스토리지 사용 금지 ✅
+- 외부 이미지, 외부 CDN 자원 사용 금지 ✅
 - 내부 Nexus Repository 등 사내 사설 저장소를 통한 Maven, npm 패키지 설치만 허용(향후)
-- 외부 클라우드(예: AWS, GCP, Firebase 등) 사용 금지
+- 외부 클라우드(예: AWS, GCP, Firebase 등) 사용 금지 ✅
+- Docker 컨테이너로 완전한 오프라인 환경 지원 ✅
+
+---
+
+## 📋 Intern Development Roadmap
+
+### 1. QR 코드 출석 시스템 완성 (우선순위 1)
+- QR 코드 스캔 기능 구현
+- 출석 상태 관리 UI
+- 출석 통계 기능
+
+### 2. 실시간 알림 시스템 (우선순위 2)
+- WebSocket 또는 Server-Sent Events 구현
+- 세미나 알림, 신청 확인 알림
+
+### 3. 고급 검색 및 필터링 (우선순위 3)
+- 전문 검색 기능
+- 다중 조건 필터링
+- 검색 결과 하이라이팅
+
+### 4. 통계 및 리포트 기능 확장 (우선순위 4)
+- 세미나 참석률 분석
+- 사용자 활동 통계
+- Excel 리포트 생성
 
 
 
