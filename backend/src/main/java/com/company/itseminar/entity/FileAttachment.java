@@ -25,7 +25,6 @@ public class FileAttachment {
     @Column(name = "file_size")
     private Long fileSize;
     
-    @Lob
     @Column(name = "file_data", nullable = false)
     private byte[] fileData;
     

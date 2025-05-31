@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 public class SeminarDto {
     
@@ -34,14 +35,24 @@ public class SeminarDto {
         this.createdBy = new UserDto(seminar.getCreatedBy());
         this.createdAt = seminar.getCreatedAt();
         
-        if (seminar.getAttachments() != null) {
-            this.attachments = seminar.getAttachments().stream()
-                    .map(FileAttachmentDto::new)
-                    .collect(Collectors.toList());
+        // 첨부파일을 안전하게 로드
+        try {
+            if (seminar.getAttachments() != null && !seminar.getAttachments().isEmpty()) {
+                this.attachments = seminar.getAttachments().stream()
+                        .map(FileAttachmentDto::new)
+                        .collect(Collectors.toList());
+            } else {
+                this.attachments = new ArrayList<>();
+            }
+        } catch (Exception e) {
+            // 첨부파일 로드 실패 시 빈 리스트로 설정
+            this.attachments = new ArrayList<>();
         }
         
         if (seminar.getApplications() != null) {
             this.applicationCount = seminar.getApplications().size();
+        } else {
+            this.applicationCount = 0;
         }
         
         this.canCancel = seminar.isCancellationAllowed() && !this.isClosed;

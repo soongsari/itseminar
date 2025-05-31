@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { seminarAPI } from "@/lib/api";
+import { seminarAPI, fileAPI } from "@/lib/api";
 import { SeminarCreateRequest } from "@/types";
 
 export default function CreateSeminarPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
   const [formData, setFormData] = useState<SeminarCreateRequest>({
     title: "",
@@ -25,11 +26,23 @@ export default function CreateSeminarPage() {
     try {
       // 날짜 형식을 LocalDateTime 형식으로 변환 (YYYY-MM-DDTHH:mm:ss)
       const localDateTime = formData.date + ":00"; // 초 추가
-      
-      await seminarAPI.createSeminar({
+
+      // 세미나 생성
+      const newSeminar = await seminarAPI.createSeminar({
         ...formData,
         date: localDateTime,
       });
+
+      // 파일이 있으면 업로드
+      if (selectedFiles && selectedFiles.length > 0) {
+        try {
+          await fileAPI.uploadFiles(newSeminar.id, selectedFiles);
+        } catch (fileError) {
+          console.error("파일 업로드 실패:", fileError);
+          // 세미나는 생성됐지만 파일 업로드에 실패한 경우
+          alert("세미나가 생성되었지만 일부 파일 업로드에 실패했습니다.");
+        }
+      }
 
       router.push("/seminars");
     } catch (err: any) {
@@ -47,6 +60,32 @@ export default function CreateSeminarPage() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(e.target.files);
+    }
+  };
+
+  const removeSelectedFile = (index: number) => {
+    if (!selectedFiles) return;
+
+    const dt = new DataTransfer();
+    Array.from(selectedFiles).forEach((file, i) => {
+      if (i !== index) {
+        dt.items.add(file);
+      }
+    });
+    setSelectedFiles(dt.files);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -138,6 +177,60 @@ export default function CreateSeminarPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="세미나 장소를 입력하세요"
               />
+            </div>
+
+            {/* 파일 업로드 섹션 */}
+            <div>
+              <label
+                htmlFor="files"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                첨부파일
+              </label>
+              <input
+                type="file"
+                id="files"
+                multiple
+                onChange={handleFileChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                PDF, Office 문서, 텍스트, 압축파일 등을 업로드할 수 있습니다.
+              </p>
+
+              {/* 선택된 파일 목록 */}
+              {selectedFiles && selectedFiles.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    선택된 파일 ({selectedFiles.length}개)
+                  </h4>
+                  <div className="space-y-2">
+                    {Array.from(selectedFiles).map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(file.size)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedFile(index)}
+                          className="ml-2 text-red-600 hover:text-red-500 text-sm"
+                        >
+                          제거
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex space-x-4">

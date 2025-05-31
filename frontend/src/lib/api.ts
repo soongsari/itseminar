@@ -5,6 +5,7 @@ import {
   User,
   Seminar,
   SeminarCreateRequest,
+  FileAttachment,
 } from "@/types";
 
 const api = axios.create({
@@ -85,6 +86,46 @@ export const applicationAPI = {
       `/api/applications/${applicationId}/cancel`
     );
     return response.data;
+  },
+};
+
+// 파일 첨부 API
+export const fileAPI = {
+  uploadFiles: async (
+    seminarId: string,
+    files: FileList
+  ): Promise<FileAttachment[]> => {
+    const formData = new FormData();
+    Array.from(files).forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const response = await api.post(
+      `/api/seminars/${seminarId}/attachments`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
+
+  getSeminarAttachments: async (
+    seminarId: string
+  ): Promise<FileAttachment[]> => {
+    const response = await api.get(`/api/seminars/${seminarId}/attachments`);
+    return response.data;
+  },
+
+  deleteFile: async (fileId: string) => {
+    const response = await api.delete(`/api/attachments/${fileId}`);
+    return response.data;
+  },
+
+  downloadFile: (fileId: string) => {
+    window.open(`/api/attachments/${fileId}/download`, "_blank");
   },
 };
 
