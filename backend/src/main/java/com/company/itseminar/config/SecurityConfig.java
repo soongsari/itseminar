@@ -1,8 +1,11 @@
 package com.company.itseminar.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,6 +19,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -65,6 +70,18 @@ public class SecurityConfig {
             .formLogin(form -> form.disable())
             .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    response.setStatus(HttpStatus.OK.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setCharacterEncoding("UTF-8");
+                    
+                    Map<String, String> result = new HashMap<>();
+                    result.put("message", "로그아웃이 완료되었습니다");
+                    
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    String json = objectMapper.writeValueAsString(result);
+                    response.getWriter().write(json);
+                })
                 .permitAll()
             );
 
