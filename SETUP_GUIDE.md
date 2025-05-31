@@ -1,5 +1,17 @@
 # IT 세미나 신청 시스템 - 설치 및 실행 가이드
 
+## 📂 GitHub 저장소
+
+**GitHub Repository**: https://github.com/soongsari/itseminar.git
+
+### 프로젝트 클론
+
+```powershell
+# Git으로 프로젝트 클론
+git clone https://github.com/soongsari/itseminar.git
+cd itseminar
+```
+
 ## 🎯 설치 완료 확인
 
 다음 명령어들이 정상적으로 작동하면 설치가 완료된 것입니다:
