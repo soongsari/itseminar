@@ -287,4 +287,32 @@ a {
   .card-content {
     @apply p-4;
   }
+
+  /* 검색 섹션 모바일 최적화 */
+  .search-container {
+    @apply space-y-3;
+  }
+
+  .search-controls {
+    @apply flex-col space-y-3;
+  }
+
+  .search-controls > div {
+    @apply w-full;
+  }
+
+  .search-input {
+    @apply text-base;
+    min-height: 44px; /* 터치 친화적 최소 높이 */
+  }
+
+  .search-select {
+    @apply text-base;
+    min-height: 44px;
+  }
+
+  .search-reset-btn {
+    @apply w-full justify-center;
+    min-height: 44px;
+  }
 }

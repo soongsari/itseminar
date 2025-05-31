@@ -8,6 +8,18 @@ export interface User {
   createdAt: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  iconName: string;
+  colorCode: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  seminarCount?: number;
+}
+
 export interface Seminar {
   id: string;
   title: string;
@@ -21,6 +33,7 @@ export interface Seminar {
   applicationCount: number;
   isUserApplied: boolean;
   canCancel: boolean;
+  category?: Category;
 }
 
 export interface SeminarCreateRequest {
@@ -28,6 +41,7 @@ export interface SeminarCreateRequest {
   description: string;
   date: string;
   location: string;
+  categoryId?: string;
 }
 
 export interface FileAttachment {

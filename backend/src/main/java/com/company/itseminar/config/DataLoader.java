@@ -1,8 +1,10 @@
 package com.company.itseminar.config;
 
+import com.company.itseminar.entity.Category;
 import com.company.itseminar.entity.Seminar;
 import com.company.itseminar.entity.SeminarApplication;
 import com.company.itseminar.entity.User;
+import com.company.itseminar.repository.CategoryRepository;
 import com.company.itseminar.repository.SeminarRepository;
 import com.company.itseminar.repository.SeminarApplicationRepository;
 import com.company.itseminar.repository.UserRepository;
@@ -26,12 +28,18 @@ public class DataLoader implements CommandLineRunner {
     private SeminarApplicationRepository seminarApplicationRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
         // 기본 계정만 생성 (관리자/사용자)
         loadUsers();
+        
+        // 카테고리 생성
+        loadCategories();
         
         // 샘플 데이터 생성 비활성화
         // loadSeminars();
@@ -205,6 +213,35 @@ public class DataLoader implements CommandLineRunner {
         if (!seminarApplicationRepository.existsByUserAndSeminar(user, seminar)) {
             SeminarApplication application = new SeminarApplication(user, seminar);
             seminarApplicationRepository.save(application);
+        }
+    }
+
+    private void loadCategories() {
+        // 이미 카테고리가 있다면 생성하지 않음
+        if (categoryRepository.count() > 0) {
+            return;
+        }
+
+        // 카테고리 생성
+        createCategoryIfNotExists("프로그래밍", "프로그래밍 언어 및 기술", "code", "#3B82F6", 1);
+        createCategoryIfNotExists("데이터베이스", "데이터베이스 관리 및 최적화", "storage", "#10B981", 2);
+        createCategoryIfNotExists("클라우드", "클라우드 서비스 및 인프라", "cloud", "#8B5CF6", 3);
+        createCategoryIfNotExists("보안", "사이버 보안 및 정보 보호", "security", "#EF4444", 4);
+        createCategoryIfNotExists("AI/ML", "인공지능 및 머신러닝", "smart_toy", "#F59E0B", 5);
+        createCategoryIfNotExists("웹개발", "프론트엔드 및 백엔드 개발", "web", "#06B6D4", 6);
+        createCategoryIfNotExists("모바일", "모바일 앱 개발", "phone_android", "#84CC16", 7);
+        createCategoryIfNotExists("DevOps", "개발 운영 및 자동화", "build", "#F97316", 8);
+        createCategoryIfNotExists("기타", "기타 IT 관련 주제", "category", "#6B7280", 99);
+
+        System.out.println("샘플 카테고리 데이터가 생성되었습니다.");
+    }
+
+    private void createCategoryIfNotExists(String name, String description, String iconName, String colorCode, int displayOrder) {
+        if (!categoryRepository.existsByName(name)) {
+            Category category = new Category(name, description, iconName, colorCode);
+            category.setDisplayOrder(displayOrder);
+            categoryRepository.save(category);
+            System.out.println("카테고리가 생성되었습니다: " + name);
         }
     }
 } 

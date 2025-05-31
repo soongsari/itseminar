@@ -121,6 +121,42 @@ export default function SeminarDetailPage() {
     }
   };
 
+  const handleCloseSeminar = async () => {
+    if (!seminar) return;
+
+    const confirmClose = window.confirm(
+      `정말로 "${seminar.title}" 세미나를 마감 처리하시겠습니까?\n\n마감 후에는 더 이상 신청을 받지 않습니다.`
+    );
+
+    if (!confirmClose) return;
+
+    try {
+      const updatedSeminar = await seminarAPI.closeSeminar(seminar.id);
+      setSeminar(updatedSeminar);
+      alert("세미나가 마감 처리되었습니다.");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "세미나 마감 처리에 실패했습니다.");
+    }
+  };
+
+  const handleReopenSeminar = async () => {
+    if (!seminar) return;
+
+    const confirmReopen = window.confirm(
+      `정말로 "${seminar.title}" 세미나의 마감을 취소하시겠습니까?\n\n마감 취소 후에는 다시 신청을 받을 수 있습니다.`
+    );
+
+    if (!confirmReopen) return;
+
+    try {
+      const updatedSeminar = await seminarAPI.reopenSeminar(seminar.id);
+      setSeminar(updatedSeminar);
+      alert("세미나 마감이 취소되었습니다.");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "세미나 마감 취소에 실패했습니다.");
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await authAPI.logout();
@@ -142,6 +178,27 @@ export default function SeminarDetailPage() {
 
   const isExpired = (dateString: string) => {
     return new Date(dateString) < new Date();
+  };
+
+  const getStatusBadge = (seminar: Seminar) => {
+    const isExpiredSeminar = isExpired(seminar.date);
+
+    // 세미나 날짜가 지난 경우 (마감 여부와 상관없이 우선순위)
+    if (isExpiredSeminar) {
+      return <span className="badge-gray">종료</span>;
+    }
+
+    // 관리자가 강제로 마감한 경우 (날짜가 안 지났을 때만)
+    if (seminar.isClosed) {
+      return <span className="badge-error">마감</span>;
+    }
+
+    // 진행 중인 세미나의 상태
+    if (seminar.isUserApplied) {
+      return <span className="badge-success">기신청</span>;
+    }
+
+    return <span className="badge-primary">신청가능</span>;
   };
 
   if (loading) {
@@ -209,27 +266,40 @@ export default function SeminarDetailPage() {
           <div className="px-6 py-8">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  {seminar.title}
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 pr-4">
+                    {seminar.title}
+                  </h2>
+                  {seminar.category && (
+                    <span
+                      className="inline-block px-3 py-1 rounded-full text-xs text-white font-medium flex-shrink-0"
+                      style={{
+                        backgroundColor: seminar.category.colorCode,
+                      }}
+                    >
+                      {seminar.category.name}
+                    </span>
+                  )}
+                </div>
 
                 {/* 상태 배지 */}
                 <div className="flex space-x-2 mb-4">
-                  {seminar.isClosed && (
+                  {isExpired(seminar.date) ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                      종료
+                    </span>
+                  ) : seminar.isClosed ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                       마감
                     </span>
-                  )}
-                  {isExpired(seminar.date) && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                      종료됨
-                    </span>
-                  )}
-                  {seminar.isUserApplied && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                      기신청
-                    </span>
-                  )}
+                  ) : null}
+                  {seminar.isUserApplied &&
+                    !isExpired(seminar.date) &&
+                    !seminar.isClosed && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        기신청
+                      </span>
+                    )}
                 </div>
               </div>
 
@@ -246,7 +316,6 @@ export default function SeminarDetailPage() {
                     </button>
                   ) : (
                     <div className="text-center space-y-2">
-                      <p className="text-green-600 font-medium">기신청 완료!</p>
                       {seminar.canCancel && userApplication?.canCancel && (
                         <button
                           onClick={handleCancelApplication}
@@ -285,6 +354,25 @@ export default function SeminarDetailPage() {
                   </h3>
                   <p className="text-lg text-gray-900">{seminar.location}</p>
                 </div>
+
+                {seminar.category && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">
+                      카테고리
+                    </h3>
+                    <div className="flex items-center">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full mr-2"
+                        style={{
+                          backgroundColor: seminar.category.colorCode,
+                        }}
+                      ></span>
+                      <p className="text-lg text-gray-900">
+                        {seminar.category.name}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -357,7 +445,7 @@ export default function SeminarDetailPage() {
           {/* 관리자 액션 */}
           {user?.role === "ADMIN" && (
             <div className="bg-gray-50 px-6 py-4 border-t">
-              <div className="flex space-x-4">
+              <div className="flex flex-wrap gap-4">
                 <button
                   onClick={() => router.push(`/seminars/${seminar.id}/edit`)}
                   className="btn-secondary"
@@ -372,6 +460,28 @@ export default function SeminarDetailPage() {
                 >
                   신청자 목록 ({seminar.applicationCount}명)
                 </button>
+
+                {/* 마감/마감취소 버튼 (세미나가 종료되지 않은 경우에만) */}
+                {!isExpired(seminar.date) && (
+                  <>
+                    {seminar.isClosed ? (
+                      <button
+                        onClick={handleReopenSeminar}
+                        className="py-2 px-4 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                      >
+                        마감 취소
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleCloseSeminar}
+                        className="py-2 px-4 border border-orange-300 rounded-md shadow-sm text-sm font-medium text-orange-700 bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
+                      >
+                        마감 처리
+                      </button>
+                    )}
+                  </>
+                )}
+
                 <button
                   onClick={handleDelete}
                   className="py-2 px-4 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"

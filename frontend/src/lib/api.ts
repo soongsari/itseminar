@@ -67,6 +67,16 @@ export const seminarAPI = {
     const response = await api.get(`/api/seminars/${id}/applicants`);
     return response.data;
   },
+
+  closeSeminar: async (id: string): Promise<Seminar> => {
+    const response = await api.put(`/api/seminars/${id}/close`);
+    return response.data;
+  },
+
+  reopenSeminar: async (id: string): Promise<Seminar> => {
+    const response = await api.put(`/api/seminars/${id}/reopen`);
+    return response.data;
+  },
 };
 
 // 신청 API

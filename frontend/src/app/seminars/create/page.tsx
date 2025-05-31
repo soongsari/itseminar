@@ -1,22 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { seminarAPI, fileAPI } from "@/lib/api";
-import { SeminarCreateRequest } from "@/types";
+import { SeminarCreateRequest, Category } from "@/types";
 
 export default function CreateSeminarPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [formData, setFormData] = useState<SeminarCreateRequest>({
     title: "",
     description: "",
     date: "",
     location: "",
+    categoryId: "",
   });
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/categories", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const categoryData = await response.json();
+        setCategories(categoryData);
+      } catch (err) {
+        console.error("카테고리 로드 실패:", err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +51,7 @@ export default function CreateSeminarPage() {
       const newSeminar = await seminarAPI.createSeminar({
         ...formData,
         date: localDateTime,
+        categoryId: formData.categoryId || undefined,
       });
 
       // 파일이 있으면 업로드
@@ -53,7 +74,9 @@ export default function CreateSeminarPage() {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -177,6 +200,30 @@ export default function CreateSeminarPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="세미나 장소를 입력하세요"
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="categoryId"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                카테고리 *
+              </label>
+              <select
+                id="categoryId"
+                name="categoryId"
+                required
+                value={formData.categoryId}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">선택하세요</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 파일 업로드 섹션 */}

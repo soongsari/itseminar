@@ -41,6 +41,10 @@ public class Seminar {
     @OneToMany(mappedBy = "seminar", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FileAttachment> attachments;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+    
     // Constructors
     public Seminar() {
         this.createdAt = LocalDateTime.now();
@@ -54,6 +58,16 @@ public class Seminar {
         this.date = date;
         this.location = location;
         this.createdBy = createdBy;
+    }
+    
+    public Seminar(String title, String description, LocalDateTime date, String location, User createdBy, Category category) {
+        this();
+        this.title = title;
+        this.description = description;
+        this.date = date;
+        this.location = location;
+        this.createdBy = createdBy;
+        this.category = category;
     }
     
     // 세미나 시작 시간이 지났는지 확인하는 메서드
@@ -145,5 +159,13 @@ public class Seminar {
     
     public void setAttachments(List<FileAttachment> attachments) {
         this.attachments = attachments;
+    }
+    
+    public Category getCategory() {
+        return category;
+    }
+    
+    public void setCategory(Category category) {
+        this.category = category;
     }
 } 

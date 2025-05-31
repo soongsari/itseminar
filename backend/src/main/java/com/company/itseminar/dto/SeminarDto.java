@@ -20,6 +20,7 @@ public class SeminarDto {
     private LocalDateTime createdAt;
     private List<FileAttachmentDto> attachments;
     private int applicationCount;
+    private CategoryDto category;
     
     @JsonProperty("isUserApplied")
     private boolean isUserApplied;
@@ -61,6 +62,11 @@ public class SeminarDto {
         }
         
         this.canCancel = seminar.isCancellationAllowed() && !this.isClosed;
+        
+        // 카테고리 정보 안전하게 로드
+        if (seminar.getCategory() != null) {
+            this.category = new CategoryDto(seminar.getCategory());
+        }
     }
     
     // Getters and Setters
@@ -158,5 +164,13 @@ public class SeminarDto {
     
     public void setCanCancel(boolean canCancel) {
         this.canCancel = canCancel;
+    }
+    
+    public CategoryDto getCategory() {
+        return category;
+    }
+    
+    public void setCategory(CategoryDto category) {
+        this.category = category;
     }
 } 

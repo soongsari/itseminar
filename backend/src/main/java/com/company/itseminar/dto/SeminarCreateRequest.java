@@ -3,6 +3,7 @@ package com.company.itseminar.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class SeminarCreateRequest {
     
@@ -17,6 +18,8 @@ public class SeminarCreateRequest {
     @NotBlank(message = "장소는 필수입니다")
     private String location;
     
+    private UUID categoryId; // 선택적 카테고리 ID
+    
     // Constructors
     public SeminarCreateRequest() {}
     
@@ -25,6 +28,14 @@ public class SeminarCreateRequest {
         this.description = description;
         this.date = date;
         this.location = location;
+    }
+    
+    public SeminarCreateRequest(String title, String description, LocalDateTime date, String location, UUID categoryId) {
+        this.title = title;
+        this.description = description;
+        this.date = date;
+        this.location = location;
+        this.categoryId = categoryId;
     }
     
     // Getters and Setters
@@ -58,5 +69,13 @@ public class SeminarCreateRequest {
     
     public void setLocation(String location) {
         this.location = location;
+    }
+    
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+    
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 } 

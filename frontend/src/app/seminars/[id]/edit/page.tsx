@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { seminarAPI, authAPI, fileAPI } from "@/lib/api";
-import { Seminar, User, SeminarCreateRequest, FileAttachment } from "@/types";
+import {
+  Seminar,
+  User,
+  SeminarCreateRequest,
+  FileAttachment,
+  Category,
+} from "@/types";
 
 export default function EditSeminarPage() {
   const [seminar, setSeminar] = useState<Seminar | null>(null);
@@ -13,6 +19,7 @@ export default function EditSeminarPage() {
   const [error, setError] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [existingFiles, setExistingFiles] = useState<FileAttachment[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const router = useRouter();
   const params = useParams();
   const seminarId = params.id as string;
@@ -22,6 +29,7 @@ export default function EditSeminarPage() {
     description: "",
     date: "",
     location: "",
+    categoryId: "",
   });
 
   useEffect(() => {
@@ -37,9 +45,20 @@ export default function EditSeminarPage() {
           return;
         }
 
-        // 세미나 정보 가져오기
-        const seminarDetail = await seminarAPI.getSeminar(seminarId);
+        // 세미나 정보와 카테고리 정보를 동시에 가져오기
+        const [seminarDetail, categoryResponse] = await Promise.all([
+          seminarAPI.getSeminar(seminarId),
+          fetch("/api/categories", {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+        ]);
+
         setSeminar(seminarDetail);
+
+        const categoryData = await categoryResponse.json();
+        setCategories(categoryData);
 
         // 기존 첨부파일 가져오기
         if (seminarDetail.attachments) {
@@ -56,6 +75,7 @@ export default function EditSeminarPage() {
           description: seminarDetail.description,
           date: dateForInput,
           location: seminarDetail.location,
+          categoryId: seminarDetail.category?.id || "",
         });
       } catch (err: any) {
         if (err.response?.status === 401) {
@@ -87,6 +107,7 @@ export default function EditSeminarPage() {
       await seminarAPI.updateSeminar(seminarId, {
         ...formData,
         date: localDateTime,
+        categoryId: formData.categoryId || undefined,
       });
 
       // 새 파일이 있으면 업로드
@@ -108,7 +129,9 @@ export default function EditSeminarPage() {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -325,6 +348,41 @@ export default function EditSeminarPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="세미나 장소를 입력하세요"
                 />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="categoryId"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  카테고리 *
+                </label>
+                <select
+                  id="categoryId"
+                  name="categoryId"
+                  required
+                  value={formData.categoryId}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">카테고리를 선택하세요</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                {seminar?.category && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    현재 카테고리:{" "}
+                    <span
+                      className="font-medium"
+                      style={{ color: seminar.category.colorCode }}
+                    >
+                      {seminar.category.name}
+                    </span>
+                  </p>
+                )}
               </div>
 
               {/* 기존 첨부파일 */}
