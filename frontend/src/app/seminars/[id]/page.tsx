@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { seminarAPI, authAPI, applicationAPI, fileAPI } from "@/lib/api";
-import { Seminar, User } from "@/types";
+import { Seminar, User, SeminarApplication } from "@/types";
 
 export default function SeminarDetailPage() {
   const [seminar, setSeminar] = useState<Seminar | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [userApplication, setUserApplication] =
+    useState<SeminarApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,6 +27,15 @@ export default function SeminarDetailPage() {
         // 세미나 상세 정보 가져오기
         const seminarDetail = await seminarAPI.getSeminar(seminarId);
         setSeminar(seminarDetail);
+
+        // 사용자의 신청 내역 가져오기 (신청 취소용 applicationId 확인)
+        if (seminarDetail.isUserApplied) {
+          const myApplications = await applicationAPI.getMyApplications();
+          const currentApplication = myApplications.find(
+            (app: SeminarApplication) => app.seminar.id === seminarId
+          );
+          setUserApplication(currentApplication || null);
+        }
       } catch (err: any) {
         if (err.response?.status === 401) {
           router.push("/login");
@@ -50,9 +61,43 @@ export default function SeminarDetailPage() {
       // 세미나 정보 다시 불러오기
       const updatedSeminar = await seminarAPI.getSeminar(seminar.id);
       setSeminar(updatedSeminar);
+
+      // 신청 내역도 다시 가져오기
+      if (updatedSeminar.isUserApplied) {
+        const myApplications = await applicationAPI.getMyApplications();
+        const currentApplication = myApplications.find(
+          (app: SeminarApplication) => app.seminar.id === seminarId
+        );
+        setUserApplication(currentApplication || null);
+      }
+
       alert("세미나 신청이 완료되었습니다!");
     } catch (err: any) {
       alert(err.response?.data?.message || "세미나 신청에 실패했습니다.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelApplication = async () => {
+    if (!seminar || !userApplication || actionLoading) return;
+
+    const confirmCancel = window.confirm(
+      `정말로 "${seminar.title}" 세미나 신청을 취소하시겠습니까?`
+    );
+
+    if (!confirmCancel) return;
+
+    setActionLoading(true);
+    try {
+      await applicationAPI.cancelApplication(userApplication.id);
+      // 세미나 정보 다시 불러오기
+      const updatedSeminar = await seminarAPI.getSeminar(seminar.id);
+      setSeminar(updatedSeminar);
+      setUserApplication(null);
+      alert("세미나 신청이 취소되었습니다.");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "세미나 신청 취소에 실패했습니다.");
     } finally {
       setActionLoading(false);
     }
@@ -182,7 +227,7 @@ export default function SeminarDetailPage() {
                   )}
                   {seminar.isUserApplied && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                      신청완료
+                      기신청
                     </span>
                   )}
                 </div>
@@ -200,13 +245,20 @@ export default function SeminarDetailPage() {
                       {actionLoading ? "신청 중..." : "세미나 신청"}
                     </button>
                   ) : (
-                    <div className="text-center">
-                      <p className="text-green-600 font-medium mb-2">
-                        신청 완료!
-                      </p>
-                      {seminar.canCancel && (
+                    <div className="text-center space-y-2">
+                      <p className="text-green-600 font-medium">기신청 완료!</p>
+                      {seminar.canCancel && userApplication?.canCancel && (
+                        <button
+                          onClick={handleCancelApplication}
+                          disabled={actionLoading}
+                          className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50"
+                        >
+                          {actionLoading ? "취소 중..." : "신청 취소"}
+                        </button>
+                      )}
+                      {(!seminar.canCancel || !userApplication?.canCancel) && (
                         <p className="text-xs text-gray-500">
-                          세미나 시작 24시간 전까지 취소 가능
+                          세미나 시작 24시간 전까지만 취소 가능
                         </p>
                       )}
                     </div>

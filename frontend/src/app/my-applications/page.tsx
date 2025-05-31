@@ -2,25 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { seminarAPI, authAPI } from "@/lib/api";
-import { Seminar, User } from "@/types";
+import { applicationAPI, authAPI } from "@/lib/api";
+import { SeminarApplication, User } from "@/types";
 
-export default function SeminarsPage() {
-  const [seminars, setSeminars] = useState<Seminar[]>([]);
+export default function MyApplicationsPage() {
+  const [applications, setApplications] = useState<SeminarApplication[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelLoading, setCancelLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [currentUser, seminarData] = await Promise.all([
+        const [currentUser, myApplications] = await Promise.all([
           authAPI.getCurrentUser(),
-          seminarAPI.getAllSeminars(),
+          applicationAPI.getMyApplications(),
         ]);
         setUser(currentUser);
-        setSeminars(seminarData);
+        setApplications(myApplications);
       } catch (err: any) {
         if (err.response?.status === 401) {
           router.push("/login");
@@ -44,6 +45,27 @@ export default function SeminarsPage() {
     }
   };
 
+  const handleCancelApplication = async (application: SeminarApplication) => {
+    const confirmCancel = window.confirm(
+      `정말로 "${application.seminar.title}" 세미나 신청을 취소하시겠습니까?`
+    );
+
+    if (!confirmCancel) return;
+
+    setCancelLoading(application.id);
+    try {
+      await applicationAPI.cancelApplication(application.id);
+      // 신청 내역 다시 불러오기
+      const updatedApplications = await applicationAPI.getMyApplications();
+      setApplications(updatedApplications);
+      alert("세미나 신청이 취소되었습니다.");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "세미나 신청 취소에 실패했습니다.");
+    } finally {
+      setCancelLoading(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ko-KR", {
       year: "numeric",
@@ -58,14 +80,14 @@ export default function SeminarsPage() {
     return new Date(dateString) < new Date();
   };
 
-  const getStatusBadge = (seminar: Seminar) => {
-    if (seminar.isClosed || isExpired(seminar.date)) {
-      return <span className="badge-gray">마감</span>;
+  const getStatusBadge = (application: SeminarApplication) => {
+    if (application.seminar.isClosed || isExpired(application.seminar.date)) {
+      return <span className="badge-gray">종료됨</span>;
     }
-    if (seminar.isUserApplied) {
-      return <span className="badge-success">기신청</span>;
+    if (application.canCancel) {
+      return <span className="badge-primary">취소가능</span>;
     }
-    return <span className="badge-primary">신청가능</span>;
+    return <span className="badge-warning">취소불가</span>;
   };
 
   if (loading) {
@@ -73,7 +95,7 @@ export default function SeminarsPage() {
       <div className="min-h-screen gradient-bg flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 spinner mx-auto mb-4"></div>
-          <p className="text-white text-lg">세미나 목록을 불러오는 중...</p>
+          <p className="text-white text-lg">신청 내역을 불러오는 중...</p>
         </div>
       </div>
     );
@@ -86,6 +108,12 @@ export default function SeminarsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.push("/seminars")}
+                className="text-white hover:text-indigo-200 text-sm font-medium"
+              >
+                ← 세미나 목록으로 돌아가기
+              </button>
               <div className="h-10 w-10 bg-white rounded-xl shadow-lg flex items-center justify-center">
                 <svg
                   className="w-6 h-6 text-indigo-600"
@@ -97,82 +125,39 @@ export default function SeminarsPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2"
                   />
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">IT 세미나</h1>
+                <h1 className="text-2xl font-bold text-white">내 신청 내역</h1>
                 {user && (
                   <p className="text-indigo-100 text-sm">
-                    안녕하세요, {user.fullName}님! ({user.department}){" "}
-                    {user.role === "ADMIN" ? "👑" : "👤"}
+                    {user.fullName}님의 세미나 신청 현황
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              {user?.role === "ADMIN" && (
-                <button
-                  onClick={() => router.push("/seminars/create")}
-                  className="btn-success"
-                >
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                    />
-                  </svg>
-                  새 세미나
-                </button>
-              )}
-              <button
-                onClick={() => router.push("/my-applications")}
-                className="btn-primary glass text-white border-white/30 hover:bg-white/10"
+            <button
+              onClick={handleLogout}
+              className="btn-secondary glass text-white border-white/30 hover:bg-white/10"
+            >
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2"
-                  />
-                </svg>
-                내 신청 내역
-              </button>
-              <button
-                onClick={handleLogout}
-                className="btn-secondary glass text-white border-white/30 hover:bg-white/10"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-                로그아웃
-              </button>
-            </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              로그아웃
+            </button>
           </div>
         </div>
       </header>
@@ -203,15 +188,15 @@ export default function SeminarsPage() {
         {/* 페이지 타이틀 */}
         <div className="text-center mb-12 animate-fade-in">
           <h2 className="text-4xl font-bold text-white mb-4">
-            🎯 진행 중인 세미나
+            📋 내 신청 내역
           </h2>
           <p className="text-xl text-indigo-100 max-w-2xl mx-auto">
-            최신 IT 트렌드와 기술을 공유하는 세미나에 참여하세요
+            신청한 세미나를 확인하고 관리하세요
           </p>
         </div>
 
-        {/* 세미나 목록 */}
-        {seminars.length === 0 ? (
+        {/* 신청 내역 목록 */}
+        {applications.length === 0 ? (
           <div className="text-center py-16 animate-fade-in">
             <div className="w-24 h-24 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <svg
@@ -224,47 +209,45 @@ export default function SeminarsPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2"
                 />
               </svg>
             </div>
             <h3 className="text-2xl font-semibold text-white mb-4">
-              등록된 세미나가 없습니다
+              신청한 세미나가 없습니다
             </h3>
             <p className="text-indigo-100 mb-8">
-              새로운 세미나가 등록되면 여기에 표시됩니다
+              관심있는 세미나에 신청해보세요
             </p>
-            {user?.role === "ADMIN" && (
-              <button
-                onClick={() => router.push("/seminars/create")}
-                className="btn-primary"
-              >
-                첫 번째 세미나 등록하기
-              </button>
-            )}
+            <button
+              onClick={() => router.push("/seminars")}
+              className="btn-primary"
+            >
+              세미나 둘러보기
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {seminars.map((seminar, index) => (
+          <div className="space-y-6">
+            {applications.map((application, index) => (
               <div
-                key={seminar.id}
-                className="card group cursor-pointer animate-fade-in hover:scale-105"
+                key={application.id}
+                className="card group animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
-                onClick={() => router.push(`/seminars/${seminar.id}`)}
               >
                 {/* 카드 헤더 */}
                 <div className="card-header">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2">
-                        {seminar.title}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {application.seminar.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        👤 {seminar.createdBy.fullName}
+                      <p className="text-sm text-gray-600">
+                        👤 {application.seminar.createdBy.fullName} (
+                        {application.seminar.createdBy.department})
                       </p>
                     </div>
                     <div className="ml-4 flex-shrink-0">
-                      {getStatusBadge(seminar)}
+                      {getStatusBadge(application)}
                     </div>
                   </div>
                 </div>
@@ -272,13 +255,8 @@ export default function SeminarsPage() {
                 {/* 카드 콘텐츠 */}
                 <div className="card-content">
                   <div className="space-y-4">
-                    {/* 세미나 설명 */}
-                    <p className="text-gray-600 text-sm line-clamp-3">
-                      {seminar.description || "세미나 설명이 없습니다."}
-                    </p>
-
                     {/* 세미나 정보 */}
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center text-sm text-gray-500">
                         <svg
                           className="w-4 h-4 mr-2 text-indigo-500"
@@ -293,7 +271,7 @@ export default function SeminarsPage() {
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        {formatDate(seminar.date)}
+                        {formatDate(application.seminar.date)}
                       </div>
 
                       <div className="flex items-center text-sm text-gray-500">
@@ -316,7 +294,24 @@ export default function SeminarsPage() {
                             d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                           />
                         </svg>
-                        {seminar.location}
+                        {application.seminar.location}
+                      </div>
+
+                      <div className="flex items-center text-sm text-gray-500">
+                        <svg
+                          className="w-4 h-4 mr-2 text-green-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        신청일: {formatDate(application.appliedAt)}
                       </div>
 
                       <div className="flex items-center text-sm text-gray-500">
@@ -333,28 +328,15 @@ export default function SeminarsPage() {
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
                           />
                         </svg>
-                        신청자 {seminar.applicationCount}명
+                        신청자 {application.seminar.applicationCount}명
                       </div>
                     </div>
 
-                    {/* 첨부파일 표시 */}
-                    {seminar.attachments && seminar.attachments.length > 0 && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <svg
-                          className="w-4 h-4 mr-2 text-indigo-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                          />
-                        </svg>
-                        첨부파일 {seminar.attachments.length}개
-                      </div>
+                    {/* 세미나 설명 */}
+                    {application.seminar.description && (
+                      <p className="text-gray-600 text-sm line-clamp-2">
+                        {application.seminar.description}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -362,26 +344,26 @@ export default function SeminarsPage() {
                 {/* 카드 푸터 */}
                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">
-                      {new Date(seminar.createdAt).toLocaleDateString("ko-KR")}{" "}
-                      등록
-                    </span>
-                    <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:text-indigo-700 transition-colors duration-200">
-                      자세히 보기
-                      <svg
-                        className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-200"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <button
+                      onClick={() =>
+                        router.push(`/seminars/${application.seminar.id}`)
+                      }
+                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                    >
+                      세미나 상세보기 →
+                    </button>
+
+                    {application.canCancel && (
+                      <button
+                        onClick={() => handleCancelApplication(application)}
+                        disabled={cancelLoading === application.id}
+                        className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
+                        {cancelLoading === application.id
+                          ? "취소 중..."
+                          : "신청 취소"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

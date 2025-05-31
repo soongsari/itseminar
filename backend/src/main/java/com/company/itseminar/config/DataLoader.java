@@ -30,9 +30,15 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        // 기본 계정만 생성 (관리자/사용자)
         loadUsers();
-        loadSeminars();
-        loadSeminarApplications();
+        
+        // 샘플 데이터 생성 비활성화
+        // loadSeminars();
+        // loadSeminarApplications();
+        
+        System.out.println("IT Seminar 애플리케이션이 시작되었습니다.");
+        System.out.println("기본 계정: admin/admin123 (관리자), user/user123 (일반사용자)");
     }
 
     private void loadUsers() {

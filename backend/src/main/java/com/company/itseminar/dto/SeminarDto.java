@@ -1,6 +1,7 @@
 package com.company.itseminar.dto;
 
 import com.company.itseminar.entity.Seminar;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +20,11 @@ public class SeminarDto {
     private LocalDateTime createdAt;
     private List<FileAttachmentDto> attachments;
     private int applicationCount;
+    
+    @JsonProperty("isUserApplied")
     private boolean isUserApplied;
+    
+    @JsonProperty("canCancel")
     private boolean canCancel;
     
     // Constructors
